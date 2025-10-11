@@ -1,0 +1,109 @@
+--[[
+MIT License
+
+Copyright (c) 2025 nyukuru
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+]]
+
+BACKGROUND_COLOR = {r=20, g=131, b=156}
+FOREGROUND_COLOR = {r=219, g=215, b=204}
+
+HEADS_Y_LEVEL = 60
+HEADS_PER_PAGE = 3
+
+MINECRAFT_HEADS_WIDTH = 8
+
+FOREGROUND_INDEX = 1
+BACKGROUND_INDEX = 2
+
+local colorutils = require "colorutils.colorutils"
+
+local fishers = {}
+local current_index = 1
+
+local function pack_rgb(color)
+    return color.r * 65536 + color.g * 256 + color.b
+end
+
+local function render_page(start_at)
+    local mon_width, _ = term.getSize()
+    local available_space = mon_width - (MINECRAFT_HEADS_WIDTH * HEADS_PER_PAGE)
+    local gap_size = available_space / (HEADS_PER_PAGE + 1)
+    for i = 1, HEADS_PER_PAGE do
+        local x = gap_size + (MINECRAFT_HEADS_WIDTH + gap_size) * (i - 1)
+        paintutils.drawImage(fishers[start_at + i - 1], math.ceil(x + 0.5), HEADS_Y_LEVEL)
+    end
+end
+
+local function generate_heads_palette(start_at)
+    local all_pixels = {}
+    local index = 1
+
+    for i = start_at, math.min(#fishers, current_index + HEADS_PER_PAGE) do
+        for _, row in ipairs(fishers[i].pixel_table) do
+            for _, pixel in ipairs(row) do
+                all_pixels[index] = pixel
+                index = index + 1
+            end
+        end
+    end
+    
+    local palette = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
+
+    for i = start_at, math.min(#fishers, current_index + HEADS_PER_PAGE) do
+        fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palette)
+    end
+end
+
+local function main()
+    local monitor = peripheral.find("monitor")
+    local terminal = term.native()
+
+    monitor.setTextScale(0.5)
+
+    term.redirect(monitor)
+    term.clear()
+    term.setPaletteColor(FOREGROUND_INDEX, pack_rgb(FOREGROUND_COLOR))
+    term.setPaletteColor(BACKGROUND_INDEX, pack_rgb(BACKGROUND_COLOR))
+
+    paintutils.drawImage(paintutils.loadImage("banner.nfp"), 2, 2)
+
+    term.redirect(terminal)
+
+    while true do
+        term.clear()
+        print("Enter your username to recieve your fishing license for this week: ")
+        local username = string.lower(read())
+
+        local f = io.open(username, "r")
+        if f then
+            io.close(f)
+            table.insert(fishers, 1, {username=username, pixel_table=colorutils.load_image_data(username)})
+        else
+            table.insert(fishers, 1, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
+        end
+
+        term.redirect(monitor)
+        generate_heads_palette(1)
+        render_page(1)
+    end    
+end
+
+main()
