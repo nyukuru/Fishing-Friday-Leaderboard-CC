@@ -94,7 +94,9 @@ local function main()
 
     while true do
         term.clear()
-        print("Enter your username to recieve your fishing license for this week: ")
+
+        term.setCursorPos(1,1)
+        write("Enter your username to recieve your fishing license: ")
         local username = string.lower(read())
 
         local f = io.open(username, "r")
