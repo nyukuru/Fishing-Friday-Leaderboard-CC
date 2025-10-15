@@ -1,0 +1,43 @@
+name: Bundle and Minify
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+
+    - name: Install luabundler and luamin
+      run: npm install -g luabundler https://github.com/mathiasbynens/luamin.git
+
+    - name: Bundle Lua files
+      run: |
+        mkdir -p dist
+        luabundler bundle leaderboard.lua -p ./?.lua -o dist/bundled.lua
+
+    - name: Minify Lua files
+      run: luamin -f dist/bundled.lua > dist/minified.lua
+
+    - name: Get short SHA
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: nightly-${{ steps.vars.outputs.sha_short }}
+        files: dist/minified.lua
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
