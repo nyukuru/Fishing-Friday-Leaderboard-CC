@@ -34,29 +34,33 @@ FOREGROUND_INDEX = 1
 BACKGROUND_INDEX = 2
 
 local colorutils = require "colorutils.colorutils"
+local assets = require "assets"
 
 local fishers = {}
-local current_index = 1
+local current_page = 1
 
 local function pack_rgb(color)
     return color.r * 65536 + color.g * 256 + color.b
 end
 
-local function render_page(start_at)
+local function render_page(page)
+    local start_index = (page - 1) * HEADS_PER_PAGE + 1
+
     local mon_width, _ = term.getSize()
     local available_space = mon_width - (MINECRAFT_HEADS_WIDTH * HEADS_PER_PAGE)
     local gap_size = available_space / (HEADS_PER_PAGE + 1)
-    for i = 1, HEADS_PER_PAGE do
+    for i = 1, math.min(#fishers - start_index, HEADS_PER_PAGE) do
         local x = gap_size + (MINECRAFT_HEADS_WIDTH + gap_size) * (i - 1)
-        paintutils.drawImage(fishers[start_at + i - 1], math.ceil(x + 0.5), HEADS_Y_LEVEL)
+        paintutils.drawImage(fishers[start_index + i - 1], math.ceil(x + 0.5), HEADS_Y_LEVEL)
     end
 end
 
-local function generate_heads_palette(start_at)
+local function generate_heads_palette(page)
     local all_pixels = {}
     local index = 1
+    local start_index = (page - 1) * HEADS_PER_PAGE + 1
 
-    for i = start_at, math.min(#fishers, current_index + HEADS_PER_PAGE) do
+    for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
         for _, row in ipairs(fishers[i].pixel_table) do
             for _, pixel in ipairs(row) do
                 all_pixels[index] = pixel
@@ -67,7 +71,7 @@ local function generate_heads_palette(start_at)
     
     local palette = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
 
-    for i = start_at, math.min(#fishers, current_index + HEADS_PER_PAGE) do
+    for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
         fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palette)
     end
 end
@@ -83,7 +87,7 @@ local function main()
     term.setPaletteColor(FOREGROUND_INDEX, pack_rgb(FOREGROUND_COLOR))
     term.setPaletteColor(BACKGROUND_INDEX, pack_rgb(BACKGROUND_COLOR))
 
-    paintutils.drawImage(paintutils.loadImage("banner.nfp"), 2, 2)
+    paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
 
     term.redirect(terminal)
 
@@ -95,15 +99,17 @@ local function main()
         local f = io.open(username, "r")
         if f then
             io.close(f)
-            table.insert(fishers, 1, {username=username, pixel_table=colorutils.load_image_data(username)})
+            table.insert(fishers, {username=username, pixel_table=colorutils.load_image_data(username)})
         else
-            table.insert(fishers, 1, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
+            table.insert(fishers, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
         end
 
         term.redirect(monitor)
-        generate_heads_palette(1)
-        render_page(1)
-    end    
+
+        current_page = math.floor(#table / HEADS_PER_PAGE) + 1
+        generate_heads_palette(current_page)
+        render_page(current_page)
+    end
 end
 
 main()
