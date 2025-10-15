@@ -70,6 +70,7 @@ local function generate_heads_palette(page)
     end
     
     local palette = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
+    print(table.concat(palette, " "))
 
     for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
         fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palette)
@@ -109,6 +110,9 @@ local function main()
         current_page = math.floor(#table / HEADS_PER_PAGE) + 1
         generate_heads_palette(current_page)
         render_page(current_page)
+
+        term.redirect(terminal)
+
     end
 end
 
