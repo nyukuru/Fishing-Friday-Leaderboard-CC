@@ -105,10 +105,13 @@ local function main()
             table.insert(fishers, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
         end
 
-        term.redirect(monitor)
 
         current_page = math.floor(#table / HEADS_PER_PAGE) + 1
         generate_heads_palette(current_page)
+        print(current_page)
+        print(table.concat(palettes[current_page], " "))
+
+        term.redirect(monitor)
         render_page(current_page)
 
         term.redirect(terminal)
