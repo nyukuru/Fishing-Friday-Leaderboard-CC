@@ -121,9 +121,14 @@ local function median_cut(colors, depth, max_depth)
     return result
 end
 
+function M.pack_rgb(color)
+    return color.r * 65536 + color.g * 256 + color.b
+end
+
+
 function M.use_palette(palette)
     for i = 1, #palette do
-        term.setPaletteColor(2 ^ (i - 1), palette[i])
+        term.setPaletteColor(i, M.pack_rgb(palette[i]))
     end
 end
 

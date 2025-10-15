@@ -33,18 +33,17 @@ MINECRAFT_HEADS_WIDTH = 8
 FOREGROUND_INDEX = 1
 BACKGROUND_INDEX = 2
 
-local colorutils = require "colorutils.colorutils"
-local assets = require "assets"
+local colorutils = require("colorutils.colorutils")
+local assets = require("assets")
 
 local fishers = {}
+local palettes = {}
 local current_page = 1
-
-local function pack_rgb(color)
-    return color.r * 65536 + color.g * 256 + color.b
-end
 
 local function render_page(page)
     local start_index = (page - 1) * HEADS_PER_PAGE + 1
+
+    colorutils.use_palette(palettes[page])
 
     local mon_width, _ = term.getSize()
     local available_space = mon_width - (MINECRAFT_HEADS_WIDTH * HEADS_PER_PAGE)
@@ -68,12 +67,11 @@ local function generate_heads_palette(page)
             end
         end
     end
-    
-    local palette = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
-    print(table.concat(palette, " "))
+
+    palettes[page] = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
 
     for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
-        fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palette)
+        fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palettes[page])
     end
 end
 
@@ -84,9 +82,11 @@ local function main()
     monitor.setTextScale(0.5)
 
     term.redirect(monitor)
+    term.setBackgroundColor(BACKGROUND_INDEX)
+    term.setTextColor(FOREGROUND_INDEX)
+    term.setPaletteColor(FOREGROUND_INDEX, colorutils.pack_rgb(FOREGROUND_COLOR))
+    term.setPaletteColor(BACKGROUND_INDEX, colorutils.pack_rgb(BACKGROUND_COLOR))
     term.clear()
-    term.setPaletteColor(FOREGROUND_INDEX, pack_rgb(FOREGROUND_COLOR))
-    term.setPaletteColor(BACKGROUND_INDEX, pack_rgb(BACKGROUND_COLOR))
 
     paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
 
@@ -112,7 +112,6 @@ local function main()
         render_page(current_page)
 
         term.redirect(terminal)
-
     end
 end
 
