@@ -128,7 +128,7 @@ end
 
 function M.use_palette(palette)
     for i = 1, #palette do
-        term.setPaletteColor(i, M.pack_rgb(palette[i]))
+        term.setPaletteColor(2 ^ (i - 1), M.pack_rgb(palette[i]))
     end
 end
 

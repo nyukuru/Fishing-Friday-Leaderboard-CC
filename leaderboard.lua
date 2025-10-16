@@ -25,7 +25,7 @@ SOFTWARE.
 BACKGROUND_COLOR = {r=20, g=131, b=156}
 FOREGROUND_COLOR = {r=219, g=215, b=204}
 
-HEADS_Y_LEVEL = 60
+HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 3
 
 MINECRAFT_HEADS_WIDTH = 8
@@ -48,7 +48,9 @@ local function render_page(page)
     local mon_width, _ = term.getSize()
     local available_space = mon_width - (MINECRAFT_HEADS_WIDTH * HEADS_PER_PAGE)
     local gap_size = available_space / (HEADS_PER_PAGE + 1)
-    for i = 1, math.min(#fishers - start_index, HEADS_PER_PAGE) do
+
+    paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + MINECRAFT_HEADS_WIDTH, BACKGROUND_INDEX)
+    for i = 1, math.min(#fishers - start_index + 1, HEADS_PER_PAGE) do
         local x = gap_size + (MINECRAFT_HEADS_WIDTH + gap_size) * (i - 1)
         paintutils.drawImage(fishers[start_index + i - 1].image, math.ceil(x + 0.5), HEADS_Y_LEVEL)
     end
@@ -82,10 +84,10 @@ local function main()
     monitor.setTextScale(0.5)
 
     term.redirect(monitor)
-    term.setBackgroundColor(BACKGROUND_INDEX)
-    term.setTextColor(FOREGROUND_INDEX)
     term.setPaletteColor(FOREGROUND_INDEX, colorutils.pack_rgb(FOREGROUND_COLOR))
     term.setPaletteColor(BACKGROUND_INDEX, colorutils.pack_rgb(BACKGROUND_COLOR))
+    term.setBackgroundColor(BACKGROUND_INDEX)
+    term.setTextColor(FOREGROUND_INDEX)
     term.clear()
 
     paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
@@ -94,7 +96,6 @@ local function main()
 
     while true do
         term.clear()
-
         term.setCursorPos(1,1)
         write("Enter your username to recieve your fishing license: ")
         local username = string.lower(read())
@@ -107,7 +108,7 @@ local function main()
             table.insert(fishers, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
         end
 
-        current_page = math.floor(#table / HEADS_PER_PAGE) + 1
+        current_page = math.floor((#table - 1) / HEADS_PER_PAGE) + 1
         generate_heads_palette(current_page)
 
         term.redirect(monitor)
