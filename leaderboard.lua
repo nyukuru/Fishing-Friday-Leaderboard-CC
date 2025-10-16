@@ -28,7 +28,8 @@ FOREGROUND_COLOR = {r=219, g=215, b=204}
 HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 3
 
-MINECRAFT_HEADS_WIDTH = 8
+HEADS_WIDTH = 8
+HEADS_HEIGHT = 8
 
 FOREGROUND_INDEX = 1
 BACKGROUND_INDEX = 2
@@ -36,9 +37,16 @@ BACKGROUND_INDEX = 2
 local colorutils = require("colorutils.colorutils")
 local assets = require("assets")
 
+local Game_State = {
+  SETUP = 1,
+  RUNNING = 2
+}
+
 local fishers = {}
 local palettes = {}
 local current_page = 1
+local current_state = Game_State.SETUP
+
 
 local function render_page(page)
     local start_index = (page - 1) * HEADS_PER_PAGE + 1
@@ -46,13 +54,23 @@ local function render_page(page)
     colorutils.use_palette(palettes[page])
 
     local mon_width, _ = term.getSize()
-    local available_space = mon_width - (MINECRAFT_HEADS_WIDTH * HEADS_PER_PAGE)
+    local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE)
     local gap_size = available_space / (HEADS_PER_PAGE + 1)
 
-    paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + MINECRAFT_HEADS_WIDTH, BACKGROUND_INDEX)
+    paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + HEADS_HEIGHT, BACKGROUND_INDEX)
     for i = 1, math.min(#fishers - start_index + 1, HEADS_PER_PAGE) do
-        local x = gap_size + (MINECRAFT_HEADS_WIDTH + gap_size) * (i - 1)
-        paintutils.drawImage(fishers[start_index + i - 1].image, math.ceil(x + 0.5), HEADS_Y_LEVEL)
+        local fisher = fishers[start_index + i - 1]
+        local img_x = gap_size + (HEADS_WIDTH + gap_size) * (i - 1)
+        paintutils.drawImage(fisher.image, math.ceil(img_x + 0.5), HEADS_Y_LEVEL)
+
+        local center_x = img_x + 4
+        term.setCursorPos(math.ceil(center_x - #fisher.username / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT)
+        term.write(fisher.username)
+
+        if current_state == Game_State.RUNNING then
+          local points_string = string.format("%05d", fisher.points)
+          term.setCursorPos(math.ceil(center_x - #points_string / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT + 1)
+        end
     end
 end
 
@@ -103,9 +121,17 @@ local function main()
         local f = io.open(username, "r")
         if f then
             io.close(f)
-            table.insert(fishers, {username=username, pixel_table=colorutils.load_image_data(username)})
+            table.insert(fishers, {
+              username=username,
+              points=0,
+              pixel_table=colorutils.load_image_data(username)
+            })
         else
-            table.insert(fishers, {username=username, pixel_table=colorutils.generate_head_image_data(username)})
+            table.insert(fishers, {
+              username=username,
+              points=0,
+              pixel_table=colorutils.generate_head_image_data(username)
+            })
         end
 
         current_page = math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1
