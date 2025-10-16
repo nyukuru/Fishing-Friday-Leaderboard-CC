@@ -54,20 +54,20 @@ local function render_page(page)
   colorutils.use_palette(palettes[page])
 
   local mon_width, _ = term.getSize()
-  local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE) - (ARROWS_WIDTH * 2)
+  local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE) - (ARROWS_WIDTH + 1 * 2)
   local gap_size = available_space / (HEADS_PER_PAGE + 1)
 
   paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + HEADS_HEIGHT, BACKGROUND_INDEX)
   if current_page ~= 1 then
-    paintutils.drawImage(paintutils.parseImage(assets.left_arrow), 1, HEADS_Y_LEVEL + 1)
+    paintutils.drawImage(paintutils.parseImage(assets.left_arrow), 2, HEADS_Y_LEVEL + 1)
   end
   if current_page ~= math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1 then
-    paintutils.drawImage(paintutils.parseImage(assets.right_arrow), 1, HEADS_Y_LEVEL + 1)
+    paintutils.drawImage(paintutils.parseImage(assets.right_arrow), mon_width - ARROWS_WIDTH - 1, HEADS_Y_LEVEL + 1)
   end
 
   for i = 1, math.min(#fishers - start_index + 1, HEADS_PER_PAGE) do
     local fisher = fishers[start_index + i - 1]
-    local img_x = gap_size + (HEADS_WIDTH + gap_size) * (i - 1)
+    local img_x = ARROWS_WIDTH + 1 + gap_size + (HEADS_WIDTH + gap_size) * (i - 1)
     local center_x = img_x + 4
 
     paintutils.drawImage(fisher.image, math.ceil(img_x + 0.5), HEADS_Y_LEVEL)
@@ -158,8 +158,13 @@ local function handle_touch()
   local mon_width, _ = term.getSize()
   while true do
     local _, _, x, y = os.pullEvent("monitor_touch")
-    if x < mon_width / 2 and current_page ~= 1 then
-      current_page = current_page - 1
+    if x < mon_width / 2 then 
+      if current_page ~= 1 then
+        current_page = current_page - 1
+        render_page(current_page)
+      end
+    elseif current_page ~= math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1 then
+      current_page = current_page + 1
       render_page(current_page)
     end
   end
