@@ -25,15 +25,17 @@ SOFTWARE.
 BACKGROUND_COLOR = {r=20, g=131, b=156}
 FOREGROUND_COLOR = {r=219, g=215, b=204}
 
+FOREGROUND_INDEX = 1
+BACKGROUND_INDEX = 2
+
 HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 5
 
 HEADS_WIDTH = 8
 HEADS_HEIGHT = 8
 
-FOREGROUND_INDEX = 1
-BACKGROUND_INDEX = 2
 ARROWS_WIDTH = 6
+
 
 local colorutils = require("colorutils.colorutils")
 local assets = require("assets")
@@ -48,20 +50,48 @@ local palettes = {}
 local current_page = 1
 local current_state = Game_State.SETUP
 
+-- Our main outputs
+local monitor = peripheral.find("monitor")
+local terminal = term.native()
+
+local function async_read()
+  local result = ""
+  while true do
+    local _, key = os.pullEvent("key")
+    if key == keys.enter then
+      return result
+    else
+      os.queueEvent("char", "INVALID")
+      local _, char = os.pullEvent("char")
+      if char ~= "INVALID" then
+        result = result .. char
+        local _, _ = os.pullEvent("char")
+      end
+    end
+  end
+end
+
+local function get_last_page()
+  return math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1
+end
+
 local function render_page(page)
+  local original_display = term.redirect(monitor)
   local start_index = (page - 1) * HEADS_PER_PAGE + 1
-
-  colorutils.use_palette(palettes[page])
-
-  local mon_width, _ = term.getSize()
+  local mon_width, _ = monitor.getSize()
   local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE) - (ARROWS_WIDTH + 1 * 2)
   local gap_size = available_space / (HEADS_PER_PAGE + 1)
 
+  colorutils.use_palette(palettes[page])
+
+  -- Draw over previous page info
   paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + HEADS_HEIGHT, BACKGROUND_INDEX)
+
+  -- Conditionally render arrows
   if current_page ~= 1 then
     paintutils.drawImage(paintutils.parseImage(assets.left_arrow), 2, HEADS_Y_LEVEL + 1)
   end
-  if current_page ~= math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1 then
+  if current_page ~= get_last_page() then
     paintutils.drawImage(paintutils.parseImage(assets.right_arrow), mon_width - ARROWS_WIDTH - 1, HEADS_Y_LEVEL + 1)
   end
 
@@ -70,46 +100,49 @@ local function render_page(page)
     local img_x = ARROWS_WIDTH + 1 + gap_size + (HEADS_WIDTH + gap_size) * (i - 1)
     local center_x = img_x + 4
 
+    -- Draw the player's head
     paintutils.drawImage(fisher.image, math.ceil(img_x + 0.5), HEADS_Y_LEVEL)
 
+    -- Re-set background color because it is overriden by drawImage
     term.setBackgroundColor(BACKGROUND_INDEX)
 
+    -- Write player's username
     term.setCursorPos(math.ceil(center_x - #fisher.username / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT)
     term.write(fisher.username)
 
+    -- Confitionally write player's score
     if current_state == Game_State.RUNNING then
       local points_string = string.format("%05d points", fisher.points)
       term.setCursorPos(math.ceil(center_x - #points_string / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT + 1)
       term.write(points_string)
     end
   end
+  term.redirect(original_display)
 end
 
 local function generate_heads_palette(page)
   local all_pixels = {}
-  local index = 1
   local start_index = (page - 1) * HEADS_PER_PAGE + 1
 
+  -- Gather all pixels in a flat list
   for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
     for _, row in ipairs(fishers[i].pixel_table) do
       for _, pixel in ipairs(row) do
-        all_pixels[index] = pixel
-        index = index + 1
+        table.insert(all_pixels, pixel)
       end
     end
   end
 
   palettes[page] = colorutils.generate_palette_with_statics(all_pixels, FOREGROUND_COLOR, BACKGROUND_COLOR)
 
+  -- Cache the quantized image in fisher.image for lookup when rendering
   for i = start_index, math.min(#fishers, start_index + HEADS_PER_PAGE - 1) do
     fishers[i].image = colorutils.quantize_image(fishers[i].pixel_table, palettes[page])
   end
 end
 
 local function main()
-  local monitor = peripheral.find("monitor")
-  local terminal = term.native()
-
+  -- Some display setup
   monitor.setTextScale(0.5)
 
   term.redirect(monitor)
@@ -121,14 +154,17 @@ local function main()
 
   paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
 
-  term.redirect(terminal)
-
+  -- This is the main loop that provisions fishing licenses
   while true do
+    term.redirect(terminal)
     term.clear()
     term.setCursorPos(1,1)
     write("Enter your username to recieve your fishing license: ")
-    local username = string.lower(read())
+    local username = string.lower(async_read())
+    -- The output may have been redirected asynchronously so ensure we have it back
+    term.redirect(terminal)
 
+    -- If we have the username head cached just use that
     local f = io.open(username, "r")
     if f then
       io.close(f)
@@ -145,19 +181,20 @@ local function main()
       })
     end
 
-    current_page = math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1
+    current_page = get_last_page()
     generate_heads_palette(current_page)
-
-    term.redirect(monitor)
     render_page(current_page)
-    term.redirect(terminal)
+
+    print("Thank you! You can exit the terminal now...")
+    os.sleep(5)
   end
 end
 
 local function handle_touch()
-  local mon_width, _ = term.getSize()
+  local mon_width, _ = monitor.getSize()
   while true do
     local _, _, x, y = os.pullEvent("monitor_touch")
+
     if x < mon_width / 2 then 
       if current_page ~= 1 then
         current_page = current_page - 1
