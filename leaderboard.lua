@@ -223,7 +223,7 @@ local function spawn_inv_man_thread(name)
 end
 
 local function clear_inventories()
-  for _, inv_man in modem.getNamesRemote() do
+  for _, inv_man in ipairs(modem.getNamesRemote()) do
     if modem.callRemote(inv_man, "getOwner") ~= nil then
       for item in modem.callRemote(name, "getItems") do
         if item.name == "extendedae:fishbig" or item.name == "minecraft:nautilus_shell " or is_fish(item) then
