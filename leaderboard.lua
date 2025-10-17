@@ -198,7 +198,7 @@ local function spawn_inv_man_thread(name)
               fishers[owner_index].points = fishers[owner_index].points + 100 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
-            elseif item.name == "minecraft:nautilus:shell" then
+            elseif item.name == "minecraft:nautilus_shell" then
               -- Nautilus Shell is worth 50 each
               fishers[owner_index].points = fishers[owner_index].points + 50 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
@@ -222,17 +222,37 @@ local function spawn_inv_man_thread(name)
   end)
 end
 
+local function clear_inventories()
+  for _, inv_man in modem.getNamesRemote() do
+    if modem.callRemote(inv_man, "getOwner") ~= nil then
+      for item in modem.callRemote(name, "getItems") do
+        if item.name == "extendedae:fishbig" or item.name == "minecraft:nautilus_shell " or is_fish(item) then
+          modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+        end
+      end
+    end
+  end
+end
+
 local function handle_touch()
   local mon_width, _ = monitor.getSize()
   while true do
     local _, _, x, y = os.pullEvent("monitor_touch")
 
-    if x < mon_width / 2 then 
+    if x >= 12 and y >= 12 and x <= 34 and y <= 20 then
+      if current_state == Game_State.SETUP then
+        paintutils.drawFilledBox(12, 12, 34, 20, BACKGROUND_INDEX)
+        clear_inventories()
+        current_state = Game_State.RUNNING
+      elseif current_state == Game_State.RUNNING then
+        current_state = Game_State.STOPPED
+      end
+    elseif x < mon_width / 2 then
       if current_page ~= 1 then
         current_page = current_page - 1
         render_page(current_page)
       end
-    elseif current_page ~= math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1 then
+    elseif current_page ~= get_last_page() then
       current_page = current_page + 1
       render_page(current_page)
     end
