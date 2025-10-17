@@ -145,12 +145,9 @@ end
 
 local function spawn_inv_man_thread(name)
   return (function()
-    local owner = modem.callRemote(name, "getOwner")
     while true do
-      if owner == nil then
-        owner = modem.callRemote(name, "getOwner")
-        os.sleep(5)
-      else
+      local owner = modem.callRemote(name, "getOwner")
+      if owner ~= nil then
         owner_index = index_with_username(fishers, owner)
         if owner_index == nil then
           local f = io.open(owner, "r")
@@ -177,14 +174,15 @@ local function spawn_inv_man_thread(name)
           for _, item in ipairs(items) do
             if item.name == FISH_OF_THE_DAY then
               fishers[owner_index].points = fishers[owner_index].points + FISH_OF_THE_DAY_MULT * item.count
-              modem.callRemote(name, "removeItemFromPlayer", "front", {slot = item.slot})
+              modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
             elseif is_fish(item) then
               fishers[owner_index].points = fishers[owner_index].points + item.count
-              modem.callRemote(name, "removeItemFromPlayer", "front", {slot = item.slot})
+              modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
             end
           end
         end
       end
+      os.sleep(5)
     end
 
   end)
