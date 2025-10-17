@@ -50,33 +50,24 @@ local palettes = {}
 local current_page = 1
 local current_state = Game_State.SETUP
 
--- Our main outputs
 local monitor = peripheral.find("monitor")
-local terminal = term.native()
-
-local function async_read()
-  local result = ""
-  while true do
-    local _, key = os.pullEvent("key")
-    if key == keys.enter then
-      return result
-    else
-      os.queueEvent("char", "INVALID")
-      local _, char = os.pullEvent("char")
-      if char ~= "INVALID" then
-        result = result .. char
-        local _, _ = os.pullEvent("char")
-      end
-    end
-  end
-end
+local modem = peripheral.find("modem")
+term.redirect(monitor)
 
 local function get_last_page()
   return math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1
 end
 
+local function in_fishers(username)
+  for _, fisher in fishers do
+    if fisher.username == username then
+      return true
+    end
+  end
+  return false
+end
+
 local function render_page(page)
-  local original_display = term.redirect(monitor)
   local start_index = (page - 1) * HEADS_PER_PAGE + 1
   local mon_width, _ = monitor.getSize()
   local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE) - (ARROWS_WIDTH + 1 * 2)
@@ -110,14 +101,13 @@ local function render_page(page)
     term.setCursorPos(math.ceil(center_x - #fisher.username / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT)
     term.write(fisher.username)
 
-    -- Confitionally write player's score
+    -- Conditionally write player's score
     if current_state == Game_State.RUNNING then
       local points_string = string.format("%05d points", fisher.points)
       term.setCursorPos(math.ceil(center_x - #points_string / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT + 1)
       term.write(points_string)
     end
   end
-  term.redirect(original_display)
 end
 
 local function generate_heads_palette(page)
@@ -141,53 +131,36 @@ local function generate_heads_palette(page)
   end
 end
 
-local function main()
-  -- Some display setup
-  monitor.setTextScale(0.5)
-
-  term.redirect(monitor)
-  term.setPaletteColor(FOREGROUND_INDEX, colorutils.pack_rgb(FOREGROUND_COLOR))
-  term.setPaletteColor(BACKGROUND_INDEX, colorutils.pack_rgb(BACKGROUND_COLOR))
-  term.setBackgroundColor(BACKGROUND_INDEX)
-  term.setTextColor(FOREGROUND_INDEX)
-  term.clear()
-
-  paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
-
-  -- This is the main loop that provisions fishing licenses
-  while true do
-    term.redirect(terminal)
-    term.clear()
-    term.setCursorPos(1,1)
-    write("Enter your username to recieve your fishing license: ")
-    local username = string.lower(async_read())
-    -- The output may have been redirected asynchronously so ensure we have it back
-    term.redirect(terminal)
-
-    -- If we have the username head cached just use that
-    local f = io.open(username, "r")
-    if f then
-      io.close(f)
-      table.insert(fishers, {
-        username=username,
-        points=0,
-        pixel_table=colorutils.load_image_data(username)
-      })
-    else
-      table.insert(fishers, {
-        username=username,
-        points=0,
-        pixel_table=colorutils.generate_head_image_data(username)
-      })
+local function spawn_inv_man_thread(name)
+  local owner
+  return (function()
+    while owner == nil do
+      owner = modem.callRemote(name, "getOwner")
+      os.sleep(10)
     end
 
-    current_page = get_last_page()
-    generate_heads_palette(current_page)
-    render_page(current_page)
+    if not in_fishers(owner) then
+      local f = io.open(owner, "r")
+      if f then
+        io.close(f)
+        table.insert(fishers, {
+          username=owner,
+          points=0,
+          pixel_table=colorutils.load_image_data(owner)
+        })
+      else
+        table.insert(fishers, {
+          username=owner,
+          points=0,
+          pixel_table=colorutils.generate_head_image_data(owner)
+        })
+      end
 
-    print("Thank you! You can exit the terminal now...")
-    os.sleep(5)
-  end
+      current_page = get_last_page()
+      generate_heads_palette(current_page)
+      render_page(current_page)
+    end
+  end)
 end
 
 local function handle_touch()
@@ -207,4 +180,20 @@ local function handle_touch()
   end
 end
 
-parallel.waitForAll(main, handle_touch)
+-- Some display setup
+monitor.setTextScale(0.5)
+
+term.setPaletteColor(FOREGROUND_INDEX, colorutils.pack_rgb(FOREGROUND_COLOR))
+term.setPaletteColor(BACKGROUND_INDEX, colorutils.pack_rgb(BACKGROUND_COLOR))
+term.setBackgroundColor(BACKGROUND_INDEX)
+term.setTextColor(FOREGROUND_INDEX)
+term.clear()
+
+paintutils.drawImage(paintutils.parseImage(assets.banner), 2, 2)
+
+local inv_mans = modem.getNamesRemote()
+for i, v in ipairs(inv_mans) do
+  inv_mans[i] = spawn_inv_man_thread(v)
+end
+
+parallel.waitForAll(table.unpack(inv_mans), handle_touch)
