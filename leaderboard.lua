@@ -143,12 +143,25 @@ local function generate_heads_palette(page)
   end
 end
 
+local function update_scores()
+  -- Resort table
+  table.sort(fishers, function(a, b)
+    return a.score < b.score
+  end)
+
+  for i = 1, get_last_page() do
+    generate_heads_palette(i)
+  end
+
+  render_page(current_page)
+end
+
 local function spawn_inv_man_thread(name)
   return (function()
     while true do
       local owner = modem.callRemote(name, "getOwner")
       if owner ~= nil then
-        owner_index = index_with_username(fishers, owner)
+        local owner_index = index_with_username(fishers, owner)
         if owner_index == nil then
           local f = io.open(owner, "r")
           if f then
@@ -173,18 +186,28 @@ local function spawn_inv_man_thread(name)
           local items = modem.callRemote(name, "getItems")
           for _, item in ipairs(items) do
             if item.name == FISH_OF_THE_DAY then
+              -- Fish of the day wis given a mult
               fishers[owner_index].points = fishers[owner_index].points + FISH_OF_THE_DAY_MULT * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+              update_scores()
+            elseif item.name == "extendedae:fishbig" then
+              -- Fumo is worth 10 each
+              fishers[owner_index].points = fishers[owner_index].points + 10 * item.count
+              modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+              update_scores()
+            elseif item.name == "minecraft:pufferfish" then
+              -- Pufferfish isn't worth anything itself because u must craft fumo using it
             elseif is_fish(item) then
+              -- Other fish are worth 1
               fishers[owner_index].points = fishers[owner_index].points + item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+              update_scores()
             end
           end
         end
       end
       os.sleep(5)
     end
-
   end)
 end
 
