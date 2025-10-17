@@ -239,15 +239,13 @@ local function handle_touch()
   while true do
     local _, _, x, y = os.pullEvent("monitor_touch")
 
-    if x >= 12 and y >= 12 and x <= 34 and y <= 20 then
-      if current_state == Game_State.SETUP then
+    if current_state == Game_State.SETUP and x >= 12 and y >= 12 and x <= 34 and y <= 20 then
         paintutils.drawFilledBox(12, 12, 34, 20, BACKGROUND_INDEX)
         clear_inventories()
         current_state = Game_State.RUNNING
         render_page(1)
-      elseif current_state == Game_State.RUNNING then
-        current_state = Game_State.STOPPED
-      end
+    elseif current_state == Game_State.RUNNING and x == mon_width and y == 1 then
+      current_state = Game_State.STOPPED
     elseif x < mon_width / 2 then
       if current_page ~= 1 then
         current_page = current_page - 1
