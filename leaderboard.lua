@@ -196,4 +196,4 @@ for i, v in ipairs(inv_mans) do
   inv_mans[i] = spawn_inv_man_thread(v)
 end
 
-parallel.waitForAll(table.unpack(inv_mans), handle_touch)
+parallel.waitForAll(handle_touch, table.unpack(inv_mans))
