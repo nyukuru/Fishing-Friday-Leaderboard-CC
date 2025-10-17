@@ -225,9 +225,9 @@ end
 local function clear_inventories()
   for _, inv_man in ipairs(modem.getNamesRemote()) do
     if modem.callRemote(inv_man, "getOwner") ~= nil then
-      for item in modem.callRemote(name, "getItems") do
+      for _, item in ipairs(modem.callRemote(inv_man, "getItems")) do
         if item.name == "extendedae:fishbig" or item.name == "minecraft:nautilus_shell " or is_fish(item) then
-          modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+          modem.callRemote(inv_man, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
         end
       end
     end
@@ -244,6 +244,7 @@ local function handle_touch()
         paintutils.drawFilledBox(12, 12, 34, 20, BACKGROUND_INDEX)
         clear_inventories()
         current_state = Game_State.RUNNING
+        render_page(1)
       elseif current_state == Game_State.RUNNING then
         current_state = Game_State.STOPPED
       end
