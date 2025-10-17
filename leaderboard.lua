@@ -59,7 +59,7 @@ local function get_last_page()
 end
 
 local function in_fishers(username)
-  for _, fisher in fishers do
+  for _, fisher in ipairs(fishers) do
     if fisher.username == username then
       return true
     end
@@ -132,8 +132,8 @@ local function generate_heads_palette(page)
 end
 
 local function spawn_inv_man_thread(name)
-  local owner
   return (function()
+    local owner = modem.callRemote(name, "getOwner")
     while owner == nil do
       owner = modem.callRemote(name, "getOwner")
       os.sleep(10)
