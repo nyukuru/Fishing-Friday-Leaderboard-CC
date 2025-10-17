@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ]]
 
-BACKGROUND_COLOR = {r=20, g=131, b=156}
+BACKGROUND_COLOR = {r=40, g=47, b=64}
 FOREGROUND_COLOR = {r=219, g=215, b=204}
 
 FOREGROUND_INDEX = 1
@@ -44,13 +44,14 @@ local assets = require("assets")
 
 local Game_State = {
   SETUP = 1,
-  RUNNING = 2
+  RUNNING = 2,
+  STOPPED = 3
 }
 
 local fishers = {}
 local palettes = {}
 local current_page = 1
-local current_state = Game_State.RUNNING
+local current_state = Game_State.SETUP
 
 local monitor = peripheral.find("monitor")
 local modem = peripheral.find("modem")
@@ -84,6 +85,7 @@ local function render_page(page)
   local mon_width, _ = monitor.getSize()
   local available_space = mon_width - (HEADS_WIDTH * HEADS_PER_PAGE) - (ARROWS_WIDTH + 1 * 2)
   local gap_size = available_space / (HEADS_PER_PAGE + 1)
+  local start_x = ARROWS_WIDTH + 1 + gap_size
 
   colorutils.use_palette(palettes[page])
 
@@ -100,8 +102,8 @@ local function render_page(page)
 
   for i = 1, math.min(#fishers - start_index + 1, HEADS_PER_PAGE) do
     local fisher = fishers[start_index + i - 1]
-    local img_x = ARROWS_WIDTH + 1 + gap_size + (HEADS_WIDTH + gap_size) * (i - 1)
-    local center_x = img_x + 4
+    local img_x = start_x + (HEADS_WIDTH + gap_size) * (i - 1)
+    local center_x = img_x + HEADS_WIDTH / 2
 
     -- Draw the player's head
     paintutils.drawImage(fisher.image, math.ceil(img_x + 0.5), HEADS_Y_LEVEL)
@@ -114,7 +116,7 @@ local function render_page(page)
     term.write(fisher.username)
 
     -- Conditionally write player's score
-    if current_state == Game_State.RUNNING then
+    if current_state ~= Game_State.SETUP then
       local points_string = string.format("%05d points", fisher.points)
       term.setCursorPos(math.ceil(center_x - #points_string / 2 + 0.5), HEADS_Y_LEVEL + HEADS_HEIGHT + 1)
       term.write(points_string)
@@ -192,8 +194,13 @@ local function spawn_inv_man_thread(name)
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
             elseif item.name == "extendedae:fishbig" then
-              -- Fumo is worth 10 each
-              fishers[owner_index].points = fishers[owner_index].points + 10 * item.count
+              -- Fumo is worth 100 each
+              fishers[owner_index].points = fishers[owner_index].points + 100 * item.count
+              modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
+              updated_score = true
+            elseif item.name == "minecraft:nautilus:shell" then
+              -- Nautilus Shell is worth 50 each
+              fishers[owner_index].points = fishers[owner_index].points + 50 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
             elseif item.name == "minecraft:pufferfish" then
