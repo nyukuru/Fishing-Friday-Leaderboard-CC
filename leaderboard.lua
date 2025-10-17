@@ -146,7 +146,7 @@ end
 local function update_scores()
   -- Resort table
   table.sort(fishers, function(a, b)
-    return a.score < b.score
+    return a.points < b.points
   end)
 
   for i = 1, get_last_page() do
