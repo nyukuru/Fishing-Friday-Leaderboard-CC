@@ -31,11 +31,13 @@ BACKGROUND_INDEX = 2
 HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 5
 
+FISH_OF_THE_DAY = "aquaculture:rainbow_trout"
+FISH_OF_THE_DAY_MULT = 5
+
 HEADS_WIDTH = 8
 HEADS_HEIGHT = 8
 
 ARROWS_WIDTH = 6
-
 
 local colorutils = require("colorutils.colorutils")
 local assets = require("assets")
@@ -48,7 +50,7 @@ local Game_State = {
 local fishers = {}
 local palettes = {}
 local current_page = 1
-local current_state = Game_State.SETUP
+local current_state = Game_State.RUNNING
 
 local monitor = peripheral.find("monitor")
 local modem = peripheral.find("modem")
@@ -58,13 +60,23 @@ local function get_last_page()
   return math.floor((#fishers - 1) / HEADS_PER_PAGE) + 1
 end
 
-local function in_fishers(username)
-  for _, fisher in ipairs(fishers) do
-    if fisher.username == username then
+local function is_fish(item)
+  for _, tag in ipairs(item.tags) do
+    if tag == "minecraft:item/minecraft:fishes" then
       return true
     end
   end
   return false
+end
+
+
+local function index_with_username(tbl, username)
+  for i, entry in ipairs(tbl) do
+    if entry.username == username then
+      return i
+    end
+  end
+  return nil
 end
 
 local function render_page(page)
@@ -134,32 +146,47 @@ end
 local function spawn_inv_man_thread(name)
   return (function()
     local owner = modem.callRemote(name, "getOwner")
-    while owner == nil do
-      owner = modem.callRemote(name, "getOwner")
-      os.sleep(10)
-    end
-
-    if not in_fishers(owner) then
-      local f = io.open(owner, "r")
-      if f then
-        io.close(f)
-        table.insert(fishers, {
-          username=owner,
-          points=0,
-          pixel_table=colorutils.load_image_data(owner)
-        })
+    while true do
+      if owner == nil then
+        owner = modem.callRemote(name, "getOwner")
+        os.sleep(5)
       else
-        table.insert(fishers, {
-          username=owner,
-          points=0,
-          pixel_table=colorutils.generate_head_image_data(owner)
-        })
-      end
+        owner_index = index_with_username(fishers, owner)
+        if owner_index == nil then
+          local f = io.open(owner, "r")
+          if f then
+            io.close(f)
+            table.insert(fishers, {
+              username=owner,
+              points=0,
+              pixel_table=colorutils.load_image_data(owner)
+            })
+          else
+            table.insert(fishers, {
+              username=owner,
+              points=0,
+              pixel_table=colorutils.generate_head_image_data(owner)
+            })
+          end
 
-      current_page = get_last_page()
-      generate_heads_palette(current_page)
-      render_page(current_page)
+          current_page = get_last_page()
+          generate_heads_palette(current_page)
+          render_page(current_page)
+        elseif current_state == Game_State.RUNNING then
+          local items = modem.callRemote(name, "getItems")
+          for _, item in ipairs(items) do
+            if item.name == FISH_OF_THE_DAY then
+              fishers[owner_index].points = fishers[owner_index].points + FISH_OF_THE_DAY_MULT * item.count
+              modem.callRemote(name, "removeItemFromPlayer", "front", {slot = item.slot})
+            elseif is_fish(item) then
+              fishers[owner_index].points = fishers[owner_index].points + item.count
+              modem.callRemote(name, "removeItemFromPlayer", "front", {slot = item.slot})
+            end
+          end
+        end
+      end
     end
+
   end)
 end
 
