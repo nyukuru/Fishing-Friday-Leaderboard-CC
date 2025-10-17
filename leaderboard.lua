@@ -184,25 +184,29 @@ local function spawn_inv_man_thread(name)
           render_page(current_page)
         elseif current_state == Game_State.RUNNING then
           local items = modem.callRemote(name, "getItems")
+          local updated_score = false
           for _, item in ipairs(items) do
             if item.name == FISH_OF_THE_DAY then
               -- Fish of the day wis given a mult
               fishers[owner_index].points = fishers[owner_index].points + FISH_OF_THE_DAY_MULT * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              update_scores()
+              updated_score = true
             elseif item.name == "extendedae:fishbig" then
               -- Fumo is worth 10 each
               fishers[owner_index].points = fishers[owner_index].points + 10 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              update_scores()
+              updated_score = true
             elseif item.name == "minecraft:pufferfish" then
               -- Pufferfish isn't worth anything itself because u must craft fumo using it
             elseif is_fish(item) then
               -- Other fish are worth 1
               fishers[owner_index].points = fishers[owner_index].points + item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              update_scores()
+              updated_score = true
             end
+          end
+          if updated_score then
+            update_scores()
           end
         end
       end
