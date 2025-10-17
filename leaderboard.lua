@@ -246,6 +246,7 @@ local function handle_touch()
         render_page(1)
     elseif current_state == Game_State.RUNNING and x == mon_width and y == 1 then
       current_state = Game_State.STOPPED
+      paintutils.drawPixel(mon_width, 1, FOREGROUND_INDEX)
     elseif x < mon_width / 2 then
       if current_page ~= 1 then
         current_page = current_page - 1
