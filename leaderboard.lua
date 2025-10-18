@@ -90,7 +90,7 @@ local function render_page(page)
   colorutils.use_palette(palettes[page])
 
   -- Draw over previous page info
-  paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + HEADS_HEIGHT, BACKGROUND_INDEX)
+  paintutils.drawFilledBox(1, HEADS_Y_LEVEL, mon_width, HEADS_Y_LEVEL + HEADS_HEIGHT + 1, BACKGROUND_INDEX)
 
   -- Conditionally render arrows
   if current_page ~= 1 then
