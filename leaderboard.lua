@@ -31,7 +31,7 @@ BACKGROUND_INDEX = 2
 HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 5
 
-FISH_OF_THE_DAY = "aquaculture:rainbow_trout"
+FISH_OF_THE_DAY = "aquaculture:tuna"
 FISH_OF_THE_DAY_MULT = 5
 
 HEADS_WIDTH = 8
@@ -194,13 +194,13 @@ local function spawn_inv_man_thread(name)
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
             elseif item.name == "extendedae:fishbig" then
-              -- Fumo is worth 100 each
-              fishers[owner_index].points = fishers[owner_index].points + 100 * item.count
+              -- Fumo is worth 10 each
+              fishers[owner_index].points = fishers[owner_index].points + 10 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
             elseif item.name == "minecraft:nautilus_shell" then
-              -- Nautilus Shell is worth 50 each
-              fishers[owner_index].points = fishers[owner_index].points + 50 * item.count
+              -- Nautilus Shell is worth 5 each
+              fishers[owner_index].points = fishers[owner_index].points + 5 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
               updated_score = true
             elseif item.name == "minecraft:pufferfish" then
