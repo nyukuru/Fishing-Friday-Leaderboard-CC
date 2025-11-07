@@ -55,6 +55,7 @@ local current_state = Game_State.SETUP
 
 local monitor = peripheral.find("monitor")
 local modem = peripheral.find("modem")
+local chatbox = peripheral.find("chatBox")
 term.redirect(monitor)
 
 local function get_last_page()
@@ -165,6 +166,7 @@ local function spawn_inv_man_thread(name)
       if owner ~= nil then
         local owner_index = index_with_username(fishers, owner)
         if owner_index == nil then
+          chatbox.sendMessage(string.format("%s has joined the fishing friday HinaBeBallin!", owner))
           local f = io.open(owner, "r")
           if f then
             io.close(f)
@@ -186,33 +188,33 @@ local function spawn_inv_man_thread(name)
           render_page(current_page)
         elseif current_state == Game_State.RUNNING then
           local items = modem.callRemote(name, "getItems")
-          local updated_score = false
+          local points_to_add = 0
           for _, item in ipairs(items) do
             if item.name == FISH_OF_THE_DAY then
-              -- Fish of the day wis given a mult
-              fishers[owner_index].points = fishers[owner_index].points + FISH_OF_THE_DAY_MULT * item.count
+              -- Fish of the day is given a mult
+              points_to_add = points_to_add + FISH_OF_THE_DAY_MULT * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              updated_score = true
             elseif item.name == "extendedae:fishbig" then
               -- Fumo is worth 10 each
-              fishers[owner_index].points = fishers[owner_index].points + 10 * item.count
+              points_to_add = points_to_add + 10 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              updated_score = true
             elseif item.name == "minecraft:nautilus_shell" then
               -- Nautilus Shell is worth 5 each
-              fishers[owner_index].points = fishers[owner_index].points + 5 * item.count
+              points_to_add = points_to_add + 5 * item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              updated_score = true
             elseif item.name == "minecraft:pufferfish" then
               -- Pufferfish isn't worth anything itself because u must craft fumo using it
+            elseif item.name == "aquaculture:minnow" then
+              -- Minnow is a bait
             elseif is_fish(item) then
               -- Other fish are worth 1
-              fishers[owner_index].points = fishers[owner_index].points + item.count
+              points_to_add = points_to_add + item.count
               modem.callRemote(name, "removeItemFromPlayer", "front", {fromSlot = item.slot, count = item.count})
-              updated_score = true
             end
           end
-          if updated_score then
+          if points_to_add ~= 0 then
+            chatbox.sendToastToPlayer("Fishing Friday", string.format("Awarded %d points for collected fish", points_to_add), owner)
+            fishers[owner_index].points = fishers[owner_index].points + points_to_add
             update_scores()
           end
         end
