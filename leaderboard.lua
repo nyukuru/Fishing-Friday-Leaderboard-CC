@@ -31,7 +31,7 @@ BACKGROUND_INDEX = 2
 HEADS_Y_LEVEL = 25
 HEADS_PER_PAGE = 5
 
-FISH_OF_THE_DAY = "aquaculture:tuna"
+FISH_OF_THE_DAY = "aquaculture:jellyfish"
 FISH_OF_THE_DAY_MULT = 5
 
 HEADS_WIDTH = 8
