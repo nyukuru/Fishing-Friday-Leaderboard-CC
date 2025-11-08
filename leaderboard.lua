@@ -55,7 +55,7 @@ local current_state = Game_State.SETUP
 
 local monitor = peripheral.find("monitor")
 local modem = peripheral.find("modem")
-local chatbox = peripheral.find("chatBox")
+local chatbox = peripheral.find("chat_box")
 term.redirect(monitor)
 
 local function get_last_page()
@@ -166,7 +166,7 @@ local function spawn_inv_man_thread(name)
       if owner ~= nil then
         local owner_index = index_with_username(fishers, owner)
         if owner_index == nil then
-          chatbox.sendMessage(string.format("%s has joined the fishing friday HinaBeBallin!", owner))
+          chatbox.sendMessage(string.format("%s has joined the fishing friday HinaBeBallin", owner))
           local f = io.open(owner, "r")
           if f then
             io.close(f)
